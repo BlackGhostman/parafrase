@@ -82,7 +82,7 @@
 
     <main class="main-content" id="app-main" style="display: none;">
         <header>
-            <h2 id="page-title">Nuevo Proyecto</h2>
+            <input type="text" id="project-title-input" class="title-input" value="Nuevo Proyecto" placeholder="Título del Proyecto">
             <div class="user-profile">
                 <span id="user-display-name">Usuario</span>
                 <div class="avatar">U</div>
@@ -117,8 +117,8 @@
 
             <div class="action-bar" style="margin-top: 2rem;">
                 <button class="btn btn-secondary" onclick="clearText()">Limpiar</button>
-                <button class="btn btn-primary" onclick="paraphraseText()">
-                    <i class="ri-sparkling-fill"></i> Parafrasear
+                <button class="btn btn-primary" onclick="saveProject()">
+                    <i class="ri-save-line"></i> Guardar
                 </button>
             </div>
         </div>

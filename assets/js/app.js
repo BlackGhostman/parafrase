@@ -44,14 +44,8 @@ function updateWordCount() {
     const highlighted = inputText.querySelector('.highlight');
     let label = `${totalWords} Palabras`;
 
-    if (highlighted) {
-        const selectedText = highlighted.innerText;
-        const selectedWords = selectedText.trim() ? selectedText.trim().split(/\s+/).length : 0;
-        label += ` (${selectedWords} Seleccionadas)`;
-        paraphraseBtn.innerHTML = '<i class="ri-sparkling-fill"></i> Parafrasear Selección';
-    } else {
-        paraphraseBtn.innerHTML = '<i class="ri-sparkling-fill"></i> Parafrasear Todo';
-    }
+    // Button text update logic removed as per new requirements
+    // if (highlighted) { ... } else { ... }
 
     wordCountSpan.textContent = label;
 }
@@ -214,58 +208,56 @@ function switchView(view) {
     if (view === 'editor') {
         document.getElementById('view-editor').style.display = 'block';
         document.querySelector('a[onclick="switchView(\'editor\')"]').classList.add('active');
-        document.getElementById('page-title').textContent = 'Nuevo Proyecto';
+        document.getElementById('project-title-input').value = 'Nuevo Proyecto';
     } else if (view === 'history') {
         document.getElementById('view-history').style.display = 'block';
         document.querySelector('a[onclick="switchView(\'history\')"]').classList.add('active');
-        document.getElementById('page-title').textContent = 'Mi Biblioteca';
+        document.getElementById('project-title-input').value = 'Mi Biblioteca';
         loadHistory();
     }
 }
 
-async function paraphraseText() {
-    // Check for highlighted text first
-    const highlighted = inputText.querySelector('.highlight');
-    let textToProcess = highlighted ? highlighted.innerText : inputText.innerText;
 
-    if (!textToProcess.trim()) return alert('Por favor ingresa un texto');
+async function saveProject() {
+    const title = document.getElementById('project-title-input').value;
+    const originalText = inputText.innerText; // or innerHTML if we want to keep formatting, but usually innerText for processing
+    const paraphrasedText = outputText.value;
 
-    const originalBtnText = paraphraseBtn.innerHTML;
-    paraphraseBtn.innerHTML = '<i class="ri-loader-4-line ri-spin"></i> Reescribiendo...';
-    paraphraseBtn.disabled = true;
+    if (!originalText.trim()) return alert('El proyecto está vacío.');
+
+    const saveBtn = document.querySelector('.btn-primary');
+    const originalBtnText = saveBtn.innerHTML;
+    saveBtn.innerHTML = '<i class="ri-loader-4-line ri-spin"></i> Guardando...';
+    saveBtn.disabled = true;
 
     try {
-        const res = await fetch(`${API_URL}/paraphrase.php`, {
+        const res = await fetch(`${API_URL}/save_project.php`, {
             method: 'POST',
             body: JSON.stringify({
-                text: textToProcess,
                 user_id: currentUser.id,
-                mode: 'creative'
+                title: title,
+                original_text: originalText,
+                paraphrased_text: paraphrasedText
             })
         });
         const data = await res.json();
 
-        // Typing effect for output
-        outputText.value = '';
-        let i = 0;
-        const typeWriter = () => {
-            if (i < data.paraphrased.length) {
-                outputText.value += data.paraphrased.charAt(i);
-                // inputText.focus(); // Removed to not disturb user's selection/focus logic
-                i++;
-                setTimeout(typeWriter, 10);
-            }
-        };
-        typeWriter();
+        if (data.success) {
+            alert('Proyecto guardado exitosamente');
+            loadHistory(); // Reload history to show the new project at the top
+        } else {
+            alert(data.message || 'Error al guardar el proyecto');
+        }
 
     } catch (err) {
         console.error(err);
-        alert('Error al procesar el texto');
+        alert('Error al conectar con el servidor');
     } finally {
-        paraphraseBtn.innerHTML = originalBtnText;
-        paraphraseBtn.disabled = false;
+        saveBtn.innerHTML = originalBtnText;
+        saveBtn.disabled = false;
     }
 }
+
 
 function clearText() {
     inputText.innerText = ''; // Use innerText
@@ -290,13 +282,23 @@ async function loadHistory() {
         projects.forEach(p => {
             const card = document.createElement('div');
             card.className = 'history-card fade-in';
+            // Add click handler to load project
+            card.onclick = () => loadProjectIntoEditor(p);
+            card.style.cursor = 'pointer';
+            card.style.position = 'relative';
+
             card.innerHTML = `
-                <div style="margin-bottom: 0.5rem; color: var(--primary); font-weight: 600;">${p.title}</div>
+                <div style="position: absolute; top: 10px; right: 10px;">
+                    <button class="btn-icon-delete" onclick="deleteProject(event, ${p.id})" title="Eliminar">
+                        <i class="ri-delete-bin-line"></i>
+                    </button>
+                </div>
+                <div style="margin-bottom: 0.5rem; color: var(--primary); font-weight: 600; padding-right: 2rem;">${p.title}</div>
                 <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1rem;">
                     ${new Date(p.created_at).toLocaleDateString()}
                 </div>
                 <div style="font-size: 0.95rem; line-height: 1.5; color: var(--text-main); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">
-                    ${p.paraphrased_text}
+                    ${p.paraphrased_text || p.original_text}
                 </div>
             `;
             container.appendChild(card);
@@ -305,3 +307,42 @@ async function loadHistory() {
         container.innerHTML = '<p>Error loading history</p>';
     }
 }
+
+function loadProjectIntoEditor(project) {
+    // Switch to editor view
+    switchView('editor');
+
+    // Populate fields
+    document.getElementById('project-title-input').value = project.title;
+    inputText.innerText = project.original_text || '';
+    outputText.value = project.paraphrased_text || '';
+    updateWordCount();
+}
+
+async function deleteProject(e, id) {
+    if (e) e.stopPropagation(); // Prevent card click
+
+    if (!confirm('¿Estás seguro de que deseas eliminar este proyecto?')) return;
+
+    try {
+        const res = await fetch(`${API_URL}/delete_project.php`, {
+            method: 'POST',
+            body: JSON.stringify({
+                id: id,
+                user_id: currentUser.id
+            })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+            // Reload history logic
+            loadHistory();
+        } else {
+            alert(data.message || 'Error al eliminar');
+        }
+    } catch (err) {
+        console.error(err);
+        alert('Error al conectar con el servidor');
+    }
+}
+
