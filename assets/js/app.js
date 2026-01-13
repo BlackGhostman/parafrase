@@ -34,6 +34,10 @@ document.addEventListener('DOMContentLoaded', () => {
         document.addEventListener('mouseup', handleSelection);
         inputText.addEventListener('keyup', handleSelection);
     }
+
+    if (outputText) {
+        outputText.addEventListener('input', updateOutputWordCount);
+    }
 });
 
 function updateWordCount() {
@@ -49,6 +53,13 @@ function updateWordCount() {
 
     wordCountSpan.textContent = label;
 }
+
+function updateOutputWordCount() {
+    const fullText = outputText.value;
+    const totalWords = fullText.trim() ? fullText.trim().split(/\s+/).length : 0;
+    document.getElementById('output-word-count').textContent = `${totalWords} Palabras`;
+}
+
 
 function handleSelection(e) {
     const selection = window.getSelection();
@@ -263,6 +274,7 @@ function clearText() {
     inputText.innerText = ''; // Use innerText
     outputText.value = '';
     updateWordCount();
+    updateOutputWordCount();
 }
 
 async function loadHistory() {
@@ -308,7 +320,8 @@ async function loadHistory() {
     }
 }
 
-function loadProjectIntoEditor(project) {
+// Make functions global
+window.loadProjectIntoEditor = function (project) {
     // Switch to editor view
     switchView('editor');
 
@@ -317,10 +330,15 @@ function loadProjectIntoEditor(project) {
     inputText.innerText = project.original_text || '';
     outputText.value = project.paraphrased_text || '';
     updateWordCount();
-}
+    updateOutputWordCount();
+};
 
-async function deleteProject(e, id) {
-    if (e) e.stopPropagation(); // Prevent card click
+window.deleteProject = async function (e, id) {
+    console.log('Deleting project', id);
+    if (e) {
+        e.stopPropagation(); // Prevent card click
+        e.preventDefault();
+    }
 
     if (!confirm('¿Estás seguro de que deseas eliminar este proyecto?')) return;
 
@@ -344,5 +362,4 @@ async function deleteProject(e, id) {
         console.error(err);
         alert('Error al conectar con el servidor');
     }
-}
-
+};

@@ -108,6 +108,7 @@
                     <div class="panel-header">
                         <span>Resultado Parafraseado</span>
                         <div class="controls">
+                             <span id="output-word-count" style="font-size: 0.8rem; margin-right: 1rem;">0 Palabras</span>
                              <i class="ri-file-copy-line" style="cursor: pointer;" title="Copiar"></i>
                         </div>
                     </div>

@@ -10,6 +10,10 @@ $db = $database->getConnection();
 
 $data = json_decode(file_get_contents("php://input"));
 
+// Debug logging
+file_put_contents("debug.log", date('Y-m-d H:i:s') . " - Request: " . json_encode($data) . "\n", FILE_APPEND);
+
+
 if (!isset($data->id) || !isset($data->user_id)) {
     http_response_code(400);
     echo json_encode(["message" => "Datos incompletos."]);
