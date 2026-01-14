@@ -100,7 +100,7 @@
                             <span style="font-size: 0.8rem;">0 Palabras</span>
                         </div>
                     </div>
-                    <div id="input-text" class="text-area" contenteditable="true" placeholder="Pega tu texto aquí para comenzar a reescribir..."></div>
+                    <div id="input-text" class="text-area" contenteditable="true" spellcheck="true" lang="es" placeholder="Pega tu texto aquí para comenzar a reescribir..."></div>
                 </div>
 
                 <!-- Output Panel -->
@@ -108,11 +108,12 @@
                     <div class="panel-header">
                         <span>Resultado Parafraseado</span>
                         <div class="controls">
+                             <i class="ri-mic-line" id="mic-btn" style="cursor: pointer; margin-right: 1rem;" title="Dictar" onclick="toggleDictation()"></i>
                              <span id="output-word-count" style="font-size: 0.8rem; margin-right: 1rem;">0 Palabras</span>
                              <i class="ri-file-copy-line" style="cursor: pointer;" title="Copiar"></i>
                         </div>
                     </div>
-                    <textarea id="output-text" class="text-area" placeholder="Tu texto reescrito aparecerá aquí..."></textarea>
+                    <textarea id="output-text" class="text-area" spellcheck="true" lang="es" placeholder="Tu texto reescrito aparecerá aquí..."></textarea>
                 </div>
             </div>
 

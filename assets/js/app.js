@@ -363,3 +363,57 @@ window.deleteProject = async function (e, id) {
         alert('Error al conectar con el servidor');
     }
 };
+
+let recognition;
+let isRecording = false;
+
+window.toggleDictation = function () {
+    const micBtn = document.getElementById('mic-btn');
+    const outputArea = document.getElementById('output-text');
+
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+        alert('Lo sentimos, tu navegador no soporta dictado por voz.');
+        return;
+    }
+
+    if (isRecording) {
+        recognition.stop();
+        return;
+    }
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    recognition = new SpeechRecognition();
+    recognition.lang = 'es-ES';
+    recognition.interimResults = false;
+    recognition.continuous = true;
+
+    recognition.onstart = function () {
+        isRecording = true;
+        micBtn.classList.add('recording');
+        micBtn.classList.remove('ri-mic-line');
+        micBtn.classList.add('ri-mic-fill');
+    };
+
+    recognition.onend = function () {
+        isRecording = false;
+        micBtn.classList.remove('recording');
+        micBtn.classList.add('ri-mic-line');
+        micBtn.classList.remove('ri-mic-fill');
+    };
+
+    recognition.onerror = function (event) {
+        console.error('Speech recognition error', event.error);
+        recognition.stop();
+    };
+
+    recognition.onresult = function (event) {
+        const transcript = event.results[event.results.length - 1][0].transcript;
+
+        // Append text where cursor is or at end
+        // Simple append for now
+        outputArea.value += (outputArea.value.length > 0 ? ' ' : '') + transcript;
+        updateOutputWordCount();
+    };
+
+    recognition.start();
+};
