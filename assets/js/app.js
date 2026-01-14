@@ -229,17 +229,54 @@ function switchView(view) {
 }
 
 
-async function saveProject() {
+
+
+// Auto-save logic
+let autoSaveTimeout;
+const autoSaveDelay = 2000; // 2 seconds
+
+function triggerAutoSave() {
+    const statusSpan = document.getElementById('save-status');
+    statusSpan.textContent = 'Guardando...';
+
+    clearTimeout(autoSaveTimeout);
+    autoSaveTimeout = setTimeout(() => {
+        saveProject(true);
+    }, autoSaveDelay);
+}
+
+// Add listeners for auto-save
+document.addEventListener('DOMContentLoaded', () => {
+    // ... existing listeners ...
+
+    const inputs = [inputText, outputText, document.getElementById('project-title-input')];
+    inputs.forEach(el => {
+        if (el) {
+            el.addEventListener('input', triggerAutoSave);
+            // Also trigger on contenteditable changes if needed, but 'input' covers it for divs and textareas
+        }
+    });
+});
+
+async function saveProject(silent = false) {
     const title = document.getElementById('project-title-input').value;
-    const originalText = inputText.innerText; // or innerHTML if we want to keep formatting, but usually innerText for processing
+    const originalText = inputText.innerText;
     const paraphrasedText = outputText.value;
+    const saveStatus = document.getElementById('save-status');
 
-    if (!originalText.trim()) return alert('El proyecto está vacío.');
+    if (!originalText.trim()) {
+        if (!silent) alert('El proyecto está vacío.');
+        return;
+    }
 
-    const saveBtn = document.querySelector('.btn-primary');
-    const originalBtnText = saveBtn.innerHTML;
-    saveBtn.innerHTML = '<i class="ri-loader-4-line ri-spin"></i> Guardando...';
-    saveBtn.disabled = true;
+    const saveBtn = document.querySelector('.btn-primary[onclick="saveProject()"]');
+    let originalBtnText = '';
+
+    if (!silent) {
+        originalBtnText = saveBtn.innerHTML;
+        saveBtn.innerHTML = '<i class="ri-loader-4-line ri-spin"></i> Guardando...';
+        saveBtn.disabled = true;
+    }
 
     try {
         const res = await fetch(`${API_URL}/save_project.php`, {
@@ -254,20 +291,93 @@ async function saveProject() {
         const data = await res.json();
 
         if (data.success) {
-            alert('Proyecto guardado exitosamente');
-            loadHistory(); // Reload history to show the new project at the top
+            if (!silent) {
+                alert('Proyecto guardado exitosamente');
+            } else {
+                saveStatus.textContent = 'Guardado';
+                setTimeout(() => { saveStatus.textContent = ''; }, 3000);
+            }
+            loadHistory();
         } else {
-            alert(data.message || 'Error al guardar el proyecto');
+            console.error('Auto-save failed:', data.message);
+            if (!silent) alert(data.message || 'Error al guardar el proyecto');
+            if (silent) saveStatus.textContent = 'Error al guardar';
         }
 
     } catch (err) {
         console.error(err);
-        alert('Error al conectar con el servidor');
+        if (!silent) alert('Error al conectar con el servidor');
+        if (silent) saveStatus.textContent = 'Error de conexión';
     } finally {
-        saveBtn.innerHTML = originalBtnText;
-        saveBtn.disabled = false;
+        if (!silent) {
+            saveBtn.innerHTML = originalBtnText;
+            saveBtn.disabled = false;
+        }
     }
 }
+
+
+async function paraphraseText() {
+    const originalText = inputText.innerText;
+
+    if (!originalText.trim()) return alert('Por favor ingresa un texto para parafrasear');
+
+    const btn = document.getElementById('btn-paraphrase');
+    const originalBtnText = btn.innerHTML;
+    btn.innerHTML = '<i class="ri-loader-4-line ri-spin"></i> Procesando...';
+    btn.disabled = true;
+
+    try {
+        const res = await fetch(`${API_URL}/paraphrase.php`, {
+            method: 'POST',
+            body: JSON.stringify({
+                text: originalText,
+                user_id: currentUser.id,
+                mode: 'creative'
+            })
+        });
+        const data = await res.json();
+
+        // Typewriter effect
+        outputText.value = '';
+        let i = 0;
+        const typeWriter = () => {
+            if (i < data.paraphrased.length) {
+                outputText.value += data.paraphrased.charAt(i);
+                i++;
+                setTimeout(typeWriter, 10);
+            } else {
+                updateOutputWordCount();
+            }
+        };
+        typeWriter();
+
+    } catch (err) {
+        console.error(err);
+        alert('Error al procesar el texto');
+    } finally {
+        btn.innerHTML = originalBtnText;
+        btn.disabled = false;
+    }
+}
+
+// Copy to clipboard with feedback
+document.querySelector('.ri-file-copy-line').onclick = function () {
+    const text = outputText.value;
+    if (!text) return;
+
+    navigator.clipboard.writeText(text).then(() => {
+        const originalTitle = this.getAttribute('title');
+        this.setAttribute('title', '¡Copiado!');
+        this.style.color = 'var(--secondary)';
+
+        setTimeout(() => {
+            this.setAttribute('title', originalTitle);
+            this.style.color = '';
+        }, 2000);
+    });
+};
+
 
 
 function clearText() {

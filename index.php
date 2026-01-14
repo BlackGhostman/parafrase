@@ -117,8 +117,12 @@
                 </div>
             </div>
 
-            <div class="action-bar" style="margin-top: 2rem;">
+            <div class="action-bar" style="margin-top: 2rem; display: flex; align-items: center; gap: 1rem;">
+                <span id="save-status" style="color: var(--text-muted); font-size: 0.9rem; margin-right: auto;"></span>
                 <button class="btn btn-secondary" onclick="clearText()">Limpiar</button>
+                <button class="btn btn-primary" id="btn-paraphrase" onclick="paraphraseText()" style="background: var(--gradient); border: none;">
+                    <i class="ri-sparkling-fill"></i> Parafrasear
+                </button>
                 <button class="btn btn-primary" onclick="saveProject()">
                     <i class="ri-save-line"></i> Guardar
                 </button>

@@ -16,35 +16,58 @@ if (!isset($data->text)) {
 function mockParaphrase($text, $mode) {
     // This is just a placeholder to show functionality. 
     // Real implementation requires an NLP library or External API.
+    // Enhanced replacements dictionary
     $replacements = [
-        "bueno" => "excelente",
-        "malo" => "deficiente",
-        "feliz" => "contento",
-        "triste" => "melancólico",
-        "usar" => "utilizar",
-        "hacer" => "realizar",
-        "trabajo" => "labor",
-        "ayuda" => "asistencia",
-        "empezar" => "comenzar",
-        "fin" => "conclusión",
-        "hola" => "saludos",
-        "mundo" => "planeta",
-        "rapido" => "veloz",
-        "lento" => "pausado"
+        // Verbs
+        "bueno" => "excelente", "malo" => "deficiente", "feliz" => "dichoso",
+        "triste" => "abatido", "usar" => "emplear", "hacer" => "ejecutar",
+        "trabajo" => "labor", "ayuda" => "colaboración", "empezar" => "iniciar",
+        "fin" => "desenlace", "hola" => "cordiales saludos", "mundo" => "globo terráqueo",
+        "rapido" => "vertiginoso", "lento" => "pausado", "decir" => "expresar",
+        "ver" => "observar", "tener" => "poseer", "caminar" => "transitar",
+        "grande" => "colosal", "pequeño" => "diminuto", "importante" => "crucial",
+        "problema" => "desafío", "solucion" => "resolución", "idea" => "concepto",
+        
+        // Connectors and common words
+        "pero" => "sin embargo,", "y" => "asimismo,", "o" => "o alternativamente",
+        "porque" => "dado que", "tambien" => "adicionalmente", "asi" => "de esta manera",
+        "entonces" => "por consiguiente", "despues" => "posteriormente"
     ];
     
-    $words = explode(" ", $text);
-    $new_words = [];
-    foreach ($words as $word) {
-        $clean_word = strtolower(preg_replace("/[^a-zA-Z]/", "", $word));
-        if (array_key_exists($clean_word, $replacements)) {
-            $new_words[] = $replacements[$clean_word];
-        } else {
-            $new_words[] = $word;
+    $sentences = preg_split('/(?<=[.?!])\s+/', $text, -1, PREG_SPLIT_NO_EMPTY);
+    $new_sentences = [];
+
+    foreach ($sentences as $sentence) {
+        $words = explode(" ", $sentence);
+        $new_words = [];
+        
+        foreach ($words as $word) {
+            // Keep punctuation for checking, but clean for replacement
+            $clean_word = strtolower(preg_replace("/[^a-zA-ZáéíóúñÁÉÍÓÚÑ]/u", "", $word));
+            
+            // Check replacement
+            if (array_key_exists($clean_word, $replacements)) {
+                $replacement = $replacements[$clean_word];
+                
+                // Match capitalization
+                if (ctype_upper(substr($word, 0, 1))) {
+                    $replacement = ucfirst($replacement);
+                }
+                
+                // Restore punctuation
+                if (preg_match("/[.,?!]+$/", $word, $matches)) {
+                    $replacement .= $matches[0];
+                }
+                
+                $new_words[] = $replacement;
+            } else {
+                $new_words[] = $word;
+            }
         }
+        $new_sentences[] = implode(" ", $new_words);
     }
     
-    return implode(" ", $new_words);
+    return implode(" ", $new_sentences);
 }
 
 $mode = isset($data->mode) ? $data->mode : 'standard';
