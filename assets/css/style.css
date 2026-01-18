@@ -320,3 +320,34 @@ header {
 .btn-icon-delete:hover {
     color: var(--secondary);
 }
+
+/* Synonym Tooltip */
+.synonym-tooltip {
+    position: absolute;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    padding: 0.5rem;
+    box-shadow: var(--shadow-lg);
+    z-index: 1000;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    max-width: 300px;
+    animation: fadeIn 0.2s ease-out;
+}
+
+.synonym-item {
+    padding: 0.25rem 0.5rem;
+    background: var(--bg-dark);
+    border-radius: 0.25rem;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--text-main);
+}
+
+.synonym-item:hover {
+    background: var(--primary);
+    color: white;
+}

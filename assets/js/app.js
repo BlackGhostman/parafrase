@@ -61,60 +61,130 @@ function updateOutputWordCount() {
 }
 
 
+// Variables para tooltip
+let currentTooltip = null;
+
 function handleSelection(e) {
     const selection = window.getSelection();
 
-    // Check if we are interacting with the editor
-    // If click was outside app entirely or in some other unrelated part, we might still want to preserve selection??
-    // The user said: "no queda marcado". This implies it disappeared.
-    // If I select text, and then click "Paraphrase", the button click is outside inputs.
-    // My previous code only handled events on `inputText`.
-    // Now we listen on `document`.
-
+    // Comprobar si hay selección y si es válida
     if (!selection.rangeCount) return;
 
-    // Check if the current selection is inside the input text
-    // We check the anchor node of the selection.
-
+    // Verificar si la selección está dentro del editor
     const isSelectionInInput = inputText.contains(selection.anchorNode) || inputText.contains(selection.focusNode);
 
     if (isSelectionInInput && !selection.isCollapsed) {
-        // We have a selection inside the input. Highlight it.
-        const range = selection.getRangeAt(0);
-        const text = selection.toString();
+        // Obtenemos el texto
+        const text = selection.toString().trim();
 
         if (text.length > 0) {
             removeHighlights();
             try {
+                const range = selection.getRangeAt(0);
                 const span = document.createElement('span');
                 span.className = 'highlight';
                 range.surroundContents(span);
 
-                // Re-select
+                // Re-seleccionar para UX
                 selection.removeAllRanges();
                 const newRange = document.createRange();
                 newRange.selectNodeContents(span);
                 selection.addRange(newRange);
+                
+                // --- Lógica de Sinónimos ---
+                // Solo si es una sola palabra (sin espacios intermedios)
+                if (!/\s/.test(text)) {
+                    const rect = span.getBoundingClientRect();
+                    showSynonymsTooltip(text, rect);
+                } else {
+                    removeSynonymTooltip();
+                }
+                // ---------------------------
+
             } catch (err) {
                 console.log('Selection error', err);
             }
         }
     } else if (isSelectionInInput && selection.isCollapsed) {
-        // Cursor is inside input, but nothing selected.
-        // User clicked inside to edit or place cursor.
-        // We should clear the highlight.
+        // Clic dentro sin selección -> limpiar
         if (inputText.contains(e.target) || e.target === inputText) {
             removeHighlights();
+            removeSynonymTooltip();
         }
     } else {
-        // Selection is outside input (or null).
-        // e.target is where the user clicked.
-        // If user clicked OUTSIDE input, do we clear?
-        // User wants persistence. So NO.
-        // We only clear if they clicked INSIDE input to start a new edit/selection.
+        // Clic fuera -> limpiar tooltip si no es clic en el tooltip mismo
+        if (e.target.closest('.synonym-tooltip')) return;
+        removeSynonymTooltip();
     }
 
     updateWordCount();
+} // End handleSelection
+
+// Funciones para Sinónimos
+
+function showSynonymsTooltip(word, rect) {
+    removeSynonymTooltip();
+
+    fetch(`${API_URL}/synonyms.php`, {
+        method: 'POST',
+        body: JSON.stringify({ text: word })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.synonyms && data.synonyms.length > 0) {
+            renderTooltip(data.synonyms, rect);
+        }
+    })
+    .catch(err => console.error('Error fetching synonyms:', err));
+}
+
+function renderTooltip(synonyms, rect) {
+    const tooltip = document.createElement('div');
+    tooltip.className = 'synonym-tooltip';
+    
+    // Posicionamiento
+    tooltip.style.left = `${rect.left + window.scrollX}px`;
+    tooltip.style.top = `${rect.bottom + window.scrollY + 8}px`; // +8px gap
+
+    synonyms.forEach(syn => {
+        const item = document.createElement('span');
+        item.className = 'synonym-item';
+        item.textContent = syn;
+        item.onclick = (e) => {
+            e.stopPropagation();
+            replaceSelectionWithSynonym(syn);
+        };
+        tooltip.appendChild(item);
+    });
+
+    document.body.appendChild(tooltip);
+    currentTooltip = tooltip;
+}
+
+function removeSynonymTooltip() {
+    if (currentTooltip) {
+        currentTooltip.remove();
+        currentTooltip = null;
+    }
+    const existing = document.querySelector('.synonym-tooltip');
+    if (existing) existing.remove();
+}
+
+function replaceSelectionWithSynonym(synonym) {
+    const highlight = inputText.querySelector('.highlight');
+    if (highlight) {
+        highlight.textContent = synonym;
+        // Opcional: mantener el highlight o quitarlo. 
+        // Si queremos quitarlo y dejar el texto plano:
+        // const parent = highlight.parentNode;
+        // parent.replaceChild(document.createTextNode(synonym), highlight);
+        // Pero mantenerlo permite seguir viendo que fue editado o volver a cambiar.
+        // Vamos a mantener el highlight y actualizar el conteo.
+        
+        // Remove tooltip logic handles itself
+        removeSynonymTooltip();
+        updateWordCount();
+    }
 }
 
 function removeHighlights() {
